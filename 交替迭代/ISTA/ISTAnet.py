@@ -247,11 +247,11 @@ class EPN_Net(LoadableModel):
                 x_tieta_k = x
 
             loss = self.f(f,self.transformer(m, x))# 标量梯度？
-
-            loss.backward(retain_graph=True)
             x.retain_grad()
+            loss.backward(retain_graph=True)
 
             b_half = x_tieta_k - self.alpha[k] * x.grad #requires_grad = true
+            x.retain_grad()
 
             x_forward = self.block_sequence[k][0](b_half)
             x_half = x_forward + b_half
@@ -270,9 +270,14 @@ class EPN_Net(LoadableModel):
             y = self.f(y_f, self.transformer(y_m, x_2))
             y.backward(retain_graph=True)
             b = x_2 - self.beta[k] * x_2.grad
+            x_2.retain_grad()
 
+            # x_backward = self.network1(b)
+            # x_backward = self.soft_function(x_backward,self.theta)
+            # x_backward = self.NLBlock(x_backward)
+            # x_backward = self.network2(x_backward)
             b = self.block_sequence[k][0](b)
-            x = x + b # x_k+1
+            x.data = x.data + b.data # x_k+1
 
             x.grad.zero_()
             x_2.grad.zero_()
