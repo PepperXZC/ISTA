@@ -45,8 +45,8 @@ parser = argparse.ArgumentParser()
 
 # data organization parameters
 parser.add_argument('--img-list', help='line-seperated list of training files',
-    default=r"D:\Study\projects\Register\dataset\file_list.txt")
-parser.add_argument('--img-prefix', help='optional input image file prefix')
+    default=r"..\\dataset\\file_list.txt")
+parser.add_argument('--img-prefix', default=r"D:\Study\projects\Register\dataset",help='optional input image file prefix')
 parser.add_argument('--img-suffix', help='optional input image file suffix')
 parser.add_argument('--atlas', help='atlas filename (default: data/atlas_norm.npz)')
 parser.add_argument('--model-dir', default='models',
