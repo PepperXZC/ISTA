@@ -8,7 +8,7 @@ from torch.distributions.normal import Normal
 from .modelio import LoadableModel, store_config_args
 import tensorflow as tf
 from . import layers
-device = 'cuda'
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # def iteration(k:int, x:torch.tensor, )
 
 class G_block(nn.Module):
@@ -209,23 +209,23 @@ class EPN_Net(LoadableModel):
         self.forward_block = nn.Sequential(
             G_block(inshape=inshape),
             softhreshold(inshape=inshape),
-            NLBlockND(in_channels=32),
+            # NLBlockND(in_channels=32),
             G_back_block(inshape=inshape)
         )
 
         self.back_block = nn.Sequential(
             G_block(inshape=inshape),
             softhreshold(inshape=inshape),
-            NLBlockND(in_channels=32),
+            # NLBlockND(in_channels=32),
             G_back_block(inshape=inshape)
         )
 
         for i in range(iteration_S):
             self.block_sequence.append(nn.Sequential(self.forward_block, self.back_block))
 
-            self.alpha.append(nn.Parameter(torch.randn(inshape), requires_grad=True).to(device))
-            self.gamma.append(nn.Parameter(torch.randn(inshape), requires_grad=True).to(device))
-            self.theta.append(nn.Parameter(torch.randn(inshape), requires_grad=True).to(device))
+            self.alpha.append(torch.randn(inshape, requires_grad=True).to(device))
+            self.gamma.append(torch.randn(inshape, requires_grad=True).to(device))
+            self.theta.append(torch.randn(inshape, requires_grad=True).to(device))
 
         self.iteration = iteration_S
         self.beta = self.alpha
@@ -245,35 +245,38 @@ class EPN_Net(LoadableModel):
                 x_tieta_k = x + self.gamma[k] * (x  - self.history[-1]) # 上一个，就是上一phase中的第二个
             else:
                 x_tieta_k = x
-            
-            # self.f.zero_grad()
+
             loss = self.f(f,self.transformer(m, x))# 标量梯度？
+
+            loss.backward(retain_graph=True)
             x.retain_grad()
-            loss.backward()
-            # y = self.f(x).backward()   
+
             b_half = x_tieta_k - self.alpha[k] * x.grad #requires_grad = true
-            # x_forward = self.network1(b_half)
-            # x_forward = self.soft_function(x_forward,self.theta)
-            # x_forward = self.NLBlock(x_forward)
-            # x_forward = self.network2(x_forward)
+
             x_forward = self.block_sequence[k][0](b_half)
             x_half = x_forward + b_half
 
             self.history = [x_half]
 
-            # self.f.zero_grad()
+            # temp = x_half + self.gamma[k] * (x_half - x)
             x_final = x_half + self.gamma[k] * (x_half - x)
-            y = self.f(f, self.transformer(m, x_final))
-            x_final.retain_grad()
-            y.backward()
-            b = x_final - self.beta[k] * x_final.grad
+            x_2 = x_final.detach()
+            # x_final.retain_grad()
 
-            # x_backward = self.network1(b)
-            # x_backward = self.soft_function(x_backward,self.theta)
-            # x_backward = self.NLBlock(x_backward)
-            # x_backward = self.network2(x_backward)
+            x_2.requires_grad_(True)
+            x_2.retain_grad()
+
+            y_f, y_m = f, m
+            y = self.f(y_f, self.transformer(y_m, x_2))
+            y.backward(retain_graph=True)
+            b = x_2 - self.beta[k] * x_2.grad
+
             b = self.block_sequence[k][0](b)
-            x += b # x_k+1
+            x = x + b # x_k+1
+
+            x.grad.zero_()
+            x_2.grad.zero_()
+
         return x
 
 

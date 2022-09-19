@@ -45,7 +45,7 @@ parser = argparse.ArgumentParser()
 
 # data organization parameters
 parser.add_argument('--img-list', help='line-seperated list of training files',
-    default=r"..\\dataset\\file_list.txt")
+    default=r"../dataset/file_list.txt")
 parser.add_argument('--img-prefix', default=r"D:\Study\projects\Register\dataset",help='optional input image file prefix')
 parser.add_argument('--img-suffix', help='optional input image file suffix')
 parser.add_argument('--atlas', help='atlas filename (default: data/atlas_norm.npz)')
@@ -124,7 +124,7 @@ os.makedirs(model_dir, exist_ok=True)
 # 获取gpu信息
 gpus = args.gpu.split(',')
 nb_gpus = len(gpus)
-device = 'cuda'
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
 
 torch.backends.cudnn.deterministic = not args.cudnn_nondet
@@ -200,6 +200,8 @@ for epoch in range(args.initial_epoch, args.epochs):
         # [1, 1, 144, 192, 160]; [1, 3, 144, 192, 160]
         # y_true中后一组数为0
         for data in inputs:
+            data.requires_grad_(True)
+        for data in y_true:
             data.requires_grad_(True)
         # run inputs through the model to produce a warped image and flow field
         optimizer_vxm.zero_grad()

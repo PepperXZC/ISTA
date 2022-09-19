@@ -1,7 +1,8 @@
-import os
+import torch
 
-with open("file.list.txt", 'w') as f:
-    for i in range(1, 31):
-        f.write("/na" + str(str(i).zfill(2)) + "_cbq.nii\n")
+x = torch.ones((2,2), requires_grad=False)
+y = x * x
 
-# print('/data/xiezhuocheng/file_list.txt')
+y.sum().backward()
+print(x.grad)
+
