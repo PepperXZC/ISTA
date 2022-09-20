@@ -47,6 +47,7 @@ parser = argparse.ArgumentParser()
 # data organization parameters
 parser.add_argument('--img-list', help='line-seperated list of training files',
     default=r"../dataset/file_list.txt")
+# parser.add_argument('--img-prefix', default=r"/home/ISTA/dataset",help='optional input image file prefix')
 parser.add_argument('--img-prefix', default=r"D:\Study\projects\Register\dataset",help='optional input image file prefix')
 parser.add_argument('--img-suffix', help='optional input image file suffix')
 parser.add_argument('--atlas', help='atlas filename (default: data/atlas_norm.npz)')
@@ -128,6 +129,7 @@ os.makedirs(model_dir, exist_ok=True)
 gpus = args.gpu.split(',')
 nb_gpus = len(gpus)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = 'cpu'
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
 
 torch.backends.cudnn.deterministic = not args.cudnn_nondet
@@ -254,6 +256,8 @@ for epoch in range(args.initial_epoch, args.epochs):
     losses_info = ', '.join(['%.4e' % f for f in loss_list])
     loss_info = 'first loss:{num1}, second loss:{num2}'.format(num1=first_loss, num2=second_loss)
     print(' - '.join((epoch_info, time_info, loss_info)), flush=True)
+    with open("./output/logs.txt", 'w') as f:
+        f.write("epoch:{num1}, first loss:{num2}, second loss:{num3}\n".format(num1=epoch, num2=first_loss, num3=second_loss))
 
 # final model save
 model.save(os.path.join(model_dir, '%04d.pt' % args.epochs))

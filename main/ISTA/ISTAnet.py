@@ -9,6 +9,7 @@ from .modelio import LoadableModel, store_config_args
 import tensorflow as tf
 from . import layers
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = 'cpu'
 # def iteration(k:int, x:torch.tensor, )
 from tqdm import tqdm
 import copy
@@ -25,7 +26,7 @@ class G_block(nn.Module):
         self.conv = nn.Sequential(
             nn.Conv3d(3,16,3,1,1), # padding = 1
             nn.Conv3d(16,32,3,1,1),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.Conv3d(32,32,3,1,1)
         )
     
@@ -43,7 +44,7 @@ class G_back_block(nn.Module):
         # for i in range(iter_num):
         self.conv = nn.Sequential(
             nn.Conv3d(32,32,3,1,1),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.Conv3d(32,16,3,1,1),
             nn.Conv3d(16,3,3,1,1), # padding = 1
         )
