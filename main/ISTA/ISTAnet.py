@@ -10,6 +10,8 @@ import tensorflow as tf
 from . import layers
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # def iteration(k:int, x:torch.tensor, )
+from tqdm import tqdm
+import copy
 
 class G_block(nn.Module):
     def __init__(self, inshape=None):
@@ -52,10 +54,11 @@ class G_back_block(nn.Module):
 class softhreshold(nn.Module): # soft函数
     def __init__(self,inshape):
         super(softhreshold,self).__init__()
-        self.theta = nn.Parameter(torch.randn(inshape), requires_grad=True).to(device)
+        self.theta = torch.randn(inshape, requires_grad=True).to(device)
     
     def forward(self, x:torch.tensor):
-        return torch.sign(x) * torch.max(torch.abs(x) - self.theta, torch.zeros(x.shape).to(device))
+        soft = torch.sign(x) * torch.max(torch.abs(x) - self.theta, torch.zeros(x.shape).to(device))
+        return soft
 
 class NLBlockND(nn.Module):
     def __init__(self, in_channels, inter_channels=None, mode='embedded', 
@@ -197,7 +200,7 @@ class EPN_Net(LoadableModel):
         super().__init__()
         # self.alpha = torch.randn(inshape).to(device)# 或许需要初始化函数的
         self.alpha = []
-        
+        self.inshape = inshape
         self.gamma = []
         self.theta = []
         self.history = []
@@ -239,19 +242,23 @@ class EPN_Net(LoadableModel):
         '''
         # x_history: [x_+0.5]
         # 注：需要修改generator格式，使其每次执行时告诉模型，对应的图像是哪张
+        x_new = torch.randn(self.inshape, requires_grad=True).to(device)
 
         for k in range(self.iteration):
             if len(self.history) != 0:
-                x_tieta_k = x + self.gamma[k] * (x  - self.history[-1]) # 上一个，就是上一phase中的第二个
+                new_temp = x_new.data + self.gamma[k] * (x_new.data - self.history[0].data) # 上一个，就是上一phase中的第二个
             else:
-                x_tieta_k = x
+                new_temp = x.data
+                self.history = [new_temp]
 
-            loss = self.f(f,self.transformer(m, x))# 标量梯度？
-            x.retain_grad()
-            loss.backward(retain_graph=True)
+            x_tieta_k = new_temp.detach()
+            x_tieta_k.requires_grad_(True)
 
-            b_half = x_tieta_k - self.alpha[k] * x.grad #requires_grad = true
-            x.retain_grad()
+            loss = self.f(f,self.transformer(m, x_tieta_k))# 标量梯度？
+            x_tieta_k.retain_grad()
+            loss.backward()
+
+            b_half = x_tieta_k - self.alpha[k] * x_tieta_k.grad #requires_grad = true
 
             x_forward = self.block_sequence[k][0](b_half)
             x_half = x_forward + b_half
@@ -266,20 +273,15 @@ class EPN_Net(LoadableModel):
             x_2.requires_grad_(True)
             x_2.retain_grad()
 
-            y_f, y_m = f, m
-            y = self.f(y_f, self.transformer(y_m, x_2))
-            y.backward(retain_graph=True)
+            y = self.f(f, self.transformer(m, x_2))
+            y.backward()
             b = x_2 - self.beta[k] * x_2.grad
             x_2.retain_grad()
 
-            # x_backward = self.network1(b)
-            # x_backward = self.soft_function(x_backward,self.theta)
-            # x_backward = self.NLBlock(x_backward)
-            # x_backward = self.network2(x_backward)
-            b = self.block_sequence[k][0](b)
-            x.data = x.data + b.data # x_k+1
+            new_temp = self.block_sequence[k][1](b) + b
+            x_new = new_temp.detach() # x_k+1
+            x_new.requires_grad_(True)
 
-            x.grad.zero_()
             x_2.grad.zero_()
 
         return x

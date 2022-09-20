@@ -1,8 +1,10 @@
 import torch
 
-x = torch.ones((2,2), requires_grad=False)
-y = x * x
+x = torch.randn((2, 2, 3), requires_grad=True)
+y = torch.randn((2, 2, 3), requires_grad=True)
 
-y.sum().backward()
-print(x.grad)
+def distance(vector1,vector2):
+    return torch.sqrt(torch.square(vector2-vector1).sum())  # pow()是自带函数
+
+print(distance(x, y))
 

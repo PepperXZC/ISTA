@@ -11,6 +11,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 import voxelmorph as vxm  # nopep8
+import torch.nn as nn
 # from torch.utils.tensorboard import SummaryWriter
 
 # import voxelmorph with pytorch backend
@@ -21,7 +22,7 @@ class MSE:
     Sigma-weighted mean squared error for image reconstruction.
     """
 
-    def __init__(self, image_sigma=1.0):
+    def __init__(self, image_sigma=144*192*160):
         self.image_sigma = image_sigma
 
     def mse(self, y_true, y_pred):
@@ -96,8 +97,10 @@ assert len(train_files) > 0, 'Could not find any training data.'
 # no need to append an extra feature axis if data is multichannel
 add_feat_axis = not args.multichannel
 
-def distance(self, vector1,vector2):
-    return torch.sqrt(sum(pow(vector2-vector1,2)))  # pow()是自带函数
+def distance(vector1,vector2):
+    return torch.sqrt(torch.square(vector2-vector1).sum())  # pow()是自带函数
+
+# distance = nn.PairwiseDistance(p=2)
 
 if args.atlas:
     # scan-to-atlas generator
@@ -152,7 +155,7 @@ else:
         int_steps=args.int_steps,
         int_downsize=args.int_downsize
     )
-    mini_model = ISTAnet.EPN_Net(inshape=in_shape,f_function=vxm_loss_func, iteration_S=30)
+    mini_model = ISTAnet.EPN_Net(inshape=in_shape,f_function=vxm_loss_func, iteration_S=5)
 
 if nb_gpus > 1:
     # use multiple GPUs via DataParallel
@@ -187,8 +190,8 @@ for epoch in range(args.initial_epoch, args.epochs):
     epoch_total_loss = []
     epoch_step_time = []
 
-    # for step in tqdm(range(args.steps_per_epoch)):
-    for step in range(args.steps_per_epoch):
+    for step in tqdm(range(args.steps_per_epoch)):
+    # for step in range(args.steps_per_epoch):
 
         step_start_time = time.time()
 
@@ -216,7 +219,13 @@ for epoch in range(args.initial_epoch, args.epochs):
         optimizer_epn.zero_grad()
         phi_pred = mini_model(y_pred[1],y_true[0],inputs[0])
         x_pred = transformer(inputs[1],phi_pred)
-        second_loss = distance(x_pred, y_true[0])
+
+        y_temp = y_true[0].detach()
+        y_temp.requires_grad_(True)
+        x_temp = x_pred.detach()
+        x_temp.requires_grad_(True)
+
+        second_loss = distance(x_temp, y_temp)
 
         loss_list = [first_loss, second_loss]
 
