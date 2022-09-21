@@ -51,7 +51,7 @@ parser.add_argument('--img-list', help='line-seperated list of training files',
 parser.add_argument('--img-prefix', default=r"C:\Users\Administrator\ISTA\dataset",help='optional input image file prefix')
 parser.add_argument('--img-suffix', help='optional input image file suffix')
 parser.add_argument('--atlas', help='atlas filename (default: data/atlas_norm.npz)')
-parser.add_argument('--model-dir', default='models',
+parser.add_argument('--model-dir', default='models/',
                     help='model output directory (default: models)')
 parser.add_argument('--multichannel', action='store_true',
                     help='specify that data has multiple channels')
@@ -61,7 +61,7 @@ parser.add_argument('--gpu', default='0', help='GPU ID number(s), comma-separate
 parser.add_argument('--batch-size', type=int, default=1, help='batch size (default: 1)')
 parser.add_argument('--epochs', type=int, default=1500,
                     help='number of training epochs (default: 1500)')
-parser.add_argument('--steps-per-epoch', type=int, default=100,
+parser.add_argument('--steps-per-epoch', type=int, default=30,
                     help='frequency of model saves (default: 100)')
 parser.add_argument('--load-model1', help='optional model file to initialize with')
 parser.add_argument('--load-model2', help='optional model file to initialize with')
@@ -98,8 +98,8 @@ assert len(train_files) > 0, 'Could not find any training data.'
 # no need to append an extra feature axis if data is multichannel
 add_feat_axis = not args.multichannel
 
-def distance(vector1,vector2):
-    return torch.sqrt(torch.square(vector2-vector1).sum())  # pow()是自带函数
+def distance(vector1,vector2, P, N):
+    return torch.sqrt(torch.square(vector2-vector1).sum()) / (P * N)  # pow()是自带函数
 
 # distance = nn.PairwiseDistance(p=2)
 
@@ -118,7 +118,8 @@ else:
 # extract shape from sampled input
 [index_1, index_2], inshape = next(dataset)
 in_shape = inshape[0][0].shape[1:-1]
-print(in_shape)
+N = in_shape[0] * in_shape[1] * in_shape[2]
+
 
 # 模型文件存放
 print(torch.randn(3))
@@ -165,8 +166,11 @@ if nb_gpus > 1:
     model.save = model.module.save
     mini_model = torch.nn.DataParallel(mini_model)
     mini_model.save = mini_model.module.save
-model = model.to(device)
-mini_model = mini_model.to(device)
+model.to(device)
+mini_model.to(device)
+
+model.train()
+mini_model.train()
 
 optimizer_vxm = torch.optim.Adam(model.parameters(), lr=args.lr)
 optimizer_epn = torch.optim.Adam(mini_model.parameters(), lr=args.lr)
@@ -227,7 +231,7 @@ for epoch in range(args.initial_epoch, args.epochs):
         x_temp = x_pred.detach()
         x_temp.requires_grad_(True)
 
-        second_loss = distance(x_temp, y_temp)
+        second_loss = distance(x_temp, y_temp, args.steps_per_epoch, N)
 
         loss_list = [first_loss, second_loss]
 
@@ -260,8 +264,10 @@ for epoch in range(args.initial_epoch, args.epochs):
 
     f.write("epoch:{num1}, first loss:{num2}, second loss:{num3}\n".format(num1=epoch, num2=first_loss, num3=second_loss))
 
-    if epoch % 10 == 0:
-        model.save(os.path.join(model_dir, '%04d.pt' % args.epochs))
+    if epoch % 1 == 0:
+        model.save(os.path.join(model_dir + "vxm/", '%04d.pt' % epoch))
+        mini_model.save(os.path.join(model_dir + "epn/", '%04d.pt' % epoch))
+
 # final model save
 
 f.close()

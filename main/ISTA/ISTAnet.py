@@ -55,7 +55,7 @@ class G_back_block(nn.Module):
 class softhreshold(nn.Module): # soft函数
     def __init__(self,inshape):
         super(softhreshold,self).__init__()
-        self.theta = torch.nn.init.xavier_normal(torch.randn(inshape, requires_grad=True).to(device))
+        self.theta = torch.nn.init.xavier_normal_(torch.randn(inshape, requires_grad=True).to(device))
     
     def forward(self, x:torch.tensor):
         soft = torch.sign(x) * torch.max(torch.abs(x) - self.theta, torch.zeros(x.shape).to(device))
@@ -227,9 +227,9 @@ class EPN_Net(LoadableModel):
         for i in range(iteration_S):
             self.block_sequence.append(nn.Sequential(self.forward_block, self.back_block))
 
-            self.alpha.append(nn.Parameter(torch.nn.init.xavier_normal(torch.randn(inshape, requires_grad=True).to(device))))
-            self.gamma.append(nn.Parameter(torch.nn.init.xavier_normal(torch.randn(inshape, requires_grad=True).to(device))))
-            self.theta.append(nn.Parameter(torch.nn.init.xavier_normal(torch.randn(inshape, requires_grad=True).to(device))))
+            self.alpha.append(nn.Parameter(torch.nn.init.xavier_normal_(torch.randn(inshape, requires_grad=True).to(device))))
+            self.gamma.append(nn.Parameter(torch.nn.init.xavier_normal_(torch.randn(inshape, requires_grad=True).to(device))))
+            self.theta.append(nn.Parameter(torch.nn.init.xavier_normal_(torch.randn(inshape, requires_grad=True).to(device))))
 
         self.iteration = iteration_S
         self.beta = self.alpha
