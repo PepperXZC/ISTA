@@ -189,8 +189,8 @@ print("start")
 for epoch in range(args.initial_epoch, args.epochs):
 
     # save model checkpoint
-    if epoch % 20 == 0:
-        model.save(os.path.join(model_dir, '%04d.pt' % epoch))
+    # if epoch % 20 == 0:
+    #     model.save(os.path.join(model_dir, '%04d.pt' % epoch))
 
     epoch_loss = []
     epoch_total_loss = []
@@ -264,7 +264,7 @@ for epoch in range(args.initial_epoch, args.epochs):
 
     f.write("epoch:{num1}, first loss:{num2}, second loss:{num3}\n".format(num1=epoch, num2=first_loss, num3=second_loss))
 
-    if epoch % 1 == 0:
+    if epoch % 10 == 0:
         model.save(os.path.join(model_dir + "vxm/", '%04d.pt' % epoch))
         mini_model.save(os.path.join(model_dir + "epn/", '%04d.pt' % epoch))
 
