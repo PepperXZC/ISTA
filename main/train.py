@@ -48,7 +48,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--img-list', help='line-seperated list of training files',
     default=r"../dataset/file_list.txt")
 # parser.add_argument('--img-prefix', default=r"/home/ISTA/dataset",help='optional input image file prefix')
-parser.add_argument('--img-prefix', default=r"D:\Study\projects\Register\dataset",help='optional input image file prefix')
+parser.add_argument('--img-prefix', default=r"C:\Users\Administrator\ISTA\dataset",help='optional input image file prefix')
 parser.add_argument('--img-suffix', help='optional input image file suffix')
 parser.add_argument('--atlas', help='atlas filename (default: data/atlas_norm.npz)')
 parser.add_argument('--model-dir', default='models',
@@ -157,7 +157,7 @@ else:
         int_steps=args.int_steps,
         int_downsize=args.int_downsize
     )
-    mini_model = ISTAnet.EPN_Net(inshape=in_shape,f_function=vxm_loss_func, iteration_S=5)
+    mini_model = ISTAnet.EPN_Net(inshape=in_shape,f_function=vxm_loss_func, iteration_S=50)
 
 if nb_gpus > 1:
     # use multiple GPUs via DataParallel
@@ -170,7 +170,7 @@ mini_model = mini_model.to(device)
 
 optimizer_vxm = torch.optim.Adam(model.parameters(), lr=args.lr)
 optimizer_epn = torch.optim.Adam(mini_model.parameters(), lr=args.lr)
-transformer = layers.SpatialTransformer(in_shape)
+transformer = layers.SpatialTransformer(in_shape, device=device)
 
 # writer = SummaryWriter()
 # input_f = torch.rand(in_shape)
@@ -179,7 +179,7 @@ transformer = layers.SpatialTransformer(in_shape)
 
 # writer.close()
 
-
+f = open("../output/logs.txt", 'w')
 
 print("start")
 for epoch in range(args.initial_epoch, args.epochs):
@@ -256,9 +256,14 @@ for epoch in range(args.initial_epoch, args.epochs):
     losses_info = ', '.join(['%.4e' % f for f in loss_list])
     loss_info = 'first loss:{num1}, second loss:{num2}'.format(num1=first_loss, num2=second_loss)
     print(' - '.join((epoch_info, time_info, loss_info)), flush=True)
-    with open("./output/logs.txt", 'w') as f:
-        f.write("epoch:{num1}, first loss:{num2}, second loss:{num3}\n".format(num1=epoch, num2=first_loss, num3=second_loss))
 
+
+    f.write("epoch:{num1}, first loss:{num2}, second loss:{num3}\n".format(num1=epoch, num2=first_loss, num3=second_loss))
+
+    if epoch % 10 == 0:
+        model.save(os.path.join(model_dir, '%04d.pt' % args.epochs))
 # final model save
-model.save(os.path.join(model_dir, '%04d.pt' % args.epochs))
+
+f.close()
+
 
