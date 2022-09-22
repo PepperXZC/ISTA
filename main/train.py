@@ -65,7 +65,7 @@ parser.add_argument('--steps-per-epoch', type=int, default=30,
                     help='frequency of model saves (default: 100)')
 parser.add_argument('--load-model1', help='optional model file to initialize with')
 parser.add_argument('--load-model2', help='optional model file to initialize with')
-parser.add_argument('--initial-epoch', type=int, default=0,
+parser.add_argument('--initial-epoch', type=int, default=104,
                     help='initial epoch number (default: 0)')
 parser.add_argument('--lr', type=float, default=1e-4, help='learning rate (default: 1e-4)')
 parser.add_argument('--cudnn-nondet', action='store_true',
@@ -183,9 +183,10 @@ transformer = layers.SpatialTransformer(in_shape, device=device)
 
 # writer.close()
 
-f = open("../output/logs.txt", 'w')
 
 print("start")
+first_loss_list = []
+second_loss_list = []
 for epoch in range(args.initial_epoch, args.epochs):
 
     # save model checkpoint
@@ -196,7 +197,7 @@ for epoch in range(args.initial_epoch, args.epochs):
     epoch_total_loss = []
     epoch_step_time = []
 
-    for step in tqdm(range(args.steps_per_epoch)):
+    for step in range(args.steps_per_epoch):
     # for step in range(args.steps_per_epoch):
 
         step_start_time = time.time()
@@ -259,10 +260,13 @@ for epoch in range(args.initial_epoch, args.epochs):
     time_info = '%.4f sec/step' % np.mean(epoch_step_time)
     losses_info = ', '.join(['%.4e' % f for f in loss_list])
     loss_info = 'first loss:{num1}, second loss:{num2}'.format(num1=first_loss, num2=second_loss)
-    print(' - '.join((epoch_info, time_info, loss_info)), flush=True)
+    # f = open("../output/logs.txt", 'w')
+    # print(' - '.join((epoch_info, time_info, loss_info)), flush=True)
+    print("{nums1} {nums2} {nums3}\n".format(nums1=epoch, nums2=first_loss, nums3=second_loss))
 
 
-    f.write("epoch:{num1}, first loss:{num2}, second loss:{num3}\n".format(num1=epoch, num2=first_loss, num3=second_loss))
+    # f.write("epoch:{num1}, first loss:{num2}, second loss:{num3}\n".format(num1=epoch, num2=first_loss, num3=second_loss))
+    # f.close()
 
     if epoch % 10 == 0:
         model.save(os.path.join(model_dir + "vxm/", '%04d.pt' % epoch))
@@ -270,6 +274,5 @@ for epoch in range(args.initial_epoch, args.epochs):
 
 # final model save
 
-f.close()
 
 
