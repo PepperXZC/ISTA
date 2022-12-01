@@ -17,6 +17,9 @@ import torch.nn as nn
 # import voxelmorph with pytorch backend
 os.environ['VXM_BACKEND'] = 'pytorch'
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = 'cpu'
+
 class MSE:
     """
     Sigma-weighted mean squared error for image reconstruction.
@@ -129,8 +132,7 @@ os.makedirs(model_dir, exist_ok=True)
 # 获取gpu信息
 gpus = args.gpu.split(',')
 nb_gpus = len(gpus)
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# device = 'cpu'
+
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
 
 torch.backends.cudnn.deterministic = not args.cudnn_nondet
